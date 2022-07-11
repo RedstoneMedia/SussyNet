@@ -27,7 +27,7 @@ fn main() {
     println!("{:?}", neural_network.feed(vec![0.0, 1.0]));
     println!("{:?}", neural_network.feed(vec![1.0, 1.0]));
     // Train network
-    neural_network.fit(inputs, outputs, 100000, 4, |_, loss| loss * 0.5);
+    neural_network.fit(inputs, outputs, 100000, 4, 10000, |_, loss| loss * 0.5);
     // Print output after trained
     println!("{:?}", neural_network.feed(vec![0.0, 0.0]));
     println!("{:?}", neural_network.feed(vec![1.0, 0.0]));

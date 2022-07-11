@@ -205,6 +205,7 @@ impl NeuralNetwork {
         outputs: Vec<DVector<f64>>,
         epochs : usize,
         batch_size : usize,
+        print_every : usize,
         learning_rate_func : fn(usize, f64) -> f64)
     {
         assert_eq!(inputs.len(), outputs.len(), "Number of training inputs and outputs must match");
@@ -221,7 +222,7 @@ impl NeuralNetwork {
                 // Modify network parameters with the calculated changes of the current batch
                 self.correct_parameters(batch_layer_changes, learning_rate_func(epoch, loss));
             }
-            if epoch % 10000 == 0 {
+            if epoch % print_every == 0 {
                 println!("[Fit] Epoch: {}/{} loss: {}", epoch+1, epochs, loss);
             }
         }
