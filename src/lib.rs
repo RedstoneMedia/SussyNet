@@ -8,7 +8,8 @@ pub enum ActivationFunction {
     Identity,
     Relu,
     LeakyRelu(f64),
-    Sigmoid
+    Sigmoid,
+    Tanh
 }
 
 impl ActivationFunction {
@@ -22,7 +23,8 @@ impl ActivationFunction {
             ActivationFunction::Identity => input,
             ActivationFunction::Relu => input.max(0.0),
             ActivationFunction::LeakyRelu(v) => input.max(input*v),
-            ActivationFunction::Sigmoid => Self::sigmoid(input)
+            ActivationFunction::Sigmoid => Self::sigmoid(input),
+            ActivationFunction::Tanh => input.tanh()
         }
     }
 
@@ -31,7 +33,8 @@ impl ActivationFunction {
             ActivationFunction::Identity => 1.0,
             ActivationFunction::Relu => if input <= 0.0 {0.0} else {1.0},
             ActivationFunction::LeakyRelu(v) => if input <= 0.0 {*v} else {1.0},
-            ActivationFunction::Sigmoid => Self::sigmoid(input) * (1.0 - Self::sigmoid(input))
+            ActivationFunction::Sigmoid => Self::sigmoid(input) * (1.0 - Self::sigmoid(input)),
+            ActivationFunction::Tanh => 1.0 - input.tanh().powi(2)
         }
     }
 
@@ -70,6 +73,7 @@ impl Layer {
 
 }
 
+#[derive(Clone)]
 pub struct NeuralNetwork {
     input_size : u16,
     pub layers : Vec<Layer>
@@ -77,6 +81,7 @@ pub struct NeuralNetwork {
 
 impl NeuralNetwork {
 
+    /// Create a new neural network based on the input size
     pub fn new(input_size : u16) -> Self {
         Self {
             input_size,
@@ -84,12 +89,14 @@ impl NeuralNetwork {
         }
     }
 
+    /// Randomizes the weights and biases in the network
     pub fn randomize(&mut self) {
         for layer in &mut self.layers {
             layer.randomize();
         }
     }
 
+    /// Adds a fully connected layer with n neurons and a activation function to the end of the network
     pub fn add_layer(&mut self, neurons : u16, activation_function : ActivationFunction) {
         let prev_layer_neurons = match self.layers.last() {
             Some(l) => l.bias_vector.len() as u16,
@@ -110,6 +117,7 @@ impl NeuralNetwork {
         last_output
     }
 
+    /// Feed input to the neural network and get the resulting output (The prediction)
     pub fn feed(&self, inputs : Vec<f64>) -> Vec<f64> {
         let input_vector : DVector<f64> = DVector::from_vec(inputs);
         self._feed(input_vector).data.as_vec().clone()
@@ -175,54 +183,48 @@ impl NeuralNetwork {
         }
     }
 
-    pub fn fit(&mut self, inputs: Vec<DVector<f64>>, outputs: Vec<DVector<f64>>, epochs : usize, learning_rate_func : fn(usize, f64) -> f64) {
-        for epoch in 0..epochs {
-            let mut batch_layer_changes = Vec::with_capacity(self.layers.len());
-            let mut loss = 0.0;
-            for (i, input_vector) in inputs.iter().enumerate() {
-                let (layer_changes, ase) = self.gradient_descent_one(input_vector, &outputs[i]);
-                loss += ase;
-                if batch_layer_changes.len() == 0 {batch_layer_changes = layer_changes; continue}
-                // Add layer changes for the current input output pair to total changes
-                for (l, (weights_layer_change, bias_layer_change)) in layer_changes.iter().enumerate() {
-                    batch_layer_changes[l].0 = &batch_layer_changes[l].0 + weights_layer_change;
-                    batch_layer_changes[l].1 = &batch_layer_changes[l].1 + bias_layer_change;
-                }
+    fn get_batch_layer_changes(&self, batch_inputs : &[DVector<f64>], batch_outputs: &[DVector<f64>]) -> (Vec<(DMatrix<f64>, DVector<f64>)>, f64) {
+        let mut batch_loss = 0.0;
+        let mut batch_layer_changes = Vec::with_capacity(self.layers.len());
+        for (i, input_vector) in batch_inputs.iter().enumerate() {
+            let (layer_changes, ase) = self.gradient_descent_one(input_vector, &batch_outputs[i]);
+            batch_loss += ase;
+            if batch_layer_changes.len() == 0 {batch_layer_changes = layer_changes; continue}
+            // Add layer changes for the current input output pair to total batch changes
+            for (l, (weights_layer_change, bias_layer_change)) in layer_changes.iter().enumerate() {
+                batch_layer_changes[l].0 = &batch_layer_changes[l].0 + weights_layer_change;
+                batch_layer_changes[l].1 = &batch_layer_changes[l].1 + bias_layer_change;
             }
-            self.correct_parameters(batch_layer_changes, learning_rate_func(epoch, loss));
+        }
+        (batch_layer_changes, batch_loss)
+    }
+
+    pub fn fit(
+        &mut self,
+        inputs: Vec<DVector<f64>>,
+        outputs: Vec<DVector<f64>>,
+        epochs : usize,
+        batch_size : usize,
+        learning_rate_func : fn(usize, f64) -> f64)
+    {
+        assert_eq!(inputs.len(), outputs.len(), "Number of training inputs and outputs must match");
+        // Split training data into batches (Important to handle large training data sets)
+        let input_batches : Vec<_> = inputs.chunks(batch_size).collect();
+        let output_batches : Vec<_> = outputs.chunks(batch_size).collect();
+        // Train for a set number of epochs
+        for epoch in 0..epochs {
+            let mut loss = 0.0;
+            for (batch_inputs, batch_outputs) in input_batches.iter().zip(&output_batches) {
+                // Calculate layer changes over all the batch training examples
+                let (batch_layer_changes, batch_loss) = self.get_batch_layer_changes(batch_inputs, batch_outputs);
+                loss = batch_loss;
+                // Modify network parameters with the calculated changes of the current batch
+                self.correct_parameters(batch_layer_changes, learning_rate_func(epoch, loss));
+            }
             if epoch % 10000 == 0 {
                 println!("[Fit] Epoch: {}/{} loss: {}", epoch+1, epochs, loss);
             }
         }
     }
 
-}
-
-fn main() {
-    let mut neural_network = NeuralNetwork::new(2);
-    neural_network.add_layer(2, ActivationFunction::Sigmoid);
-    neural_network.add_layer(1, ActivationFunction::Sigmoid);
-    neural_network.randomize();
-
-    // Generate example XOR training data
-    let mut inputs = Vec::<DVector<f64>>::new();
-    let mut outputs = Vec::<DVector<f64>>::new();
-    for i in 0..=1 {
-        for j in 0..=1 {
-            let desired_out = ((i != 0) ^ (j != 0)) as i32 as f64;
-            inputs.push(DVector::from_column_slice(&[i as f64, j as f64]));
-            outputs.push(DVector::from_column_slice(&[desired_out]));
-        }
-    }
-
-    println!("{:?}", neural_network.feed(vec![0.0, 0.0]));
-    println!("{:?}", neural_network.feed(vec![1.0, 0.0]));
-    println!("{:?}", neural_network.feed(vec![0.0, 1.0]));
-    println!("{:?}", neural_network.feed(vec![1.0, 1.0]));
-    // Train network
-    neural_network.fit(inputs, outputs, 100000, |_, loss| loss * 0.5);
-    println!("{:?}", neural_network.feed(vec![0.0, 0.0]));
-    println!("{:?}", neural_network.feed(vec![1.0, 0.0]));
-    println!("{:?}", neural_network.feed(vec![0.0, 1.0]));
-    println!("{:?}", neural_network.feed(vec![1.0, 1.0]));
 }
