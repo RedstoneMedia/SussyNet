@@ -83,14 +83,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "neural_network_from_scratch"
-version = "0.1.0"
-dependencies = [
- "nalgebra",
- "rand",
-]
-
-[[package]]
 name = "num-complex"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -215,6 +207,14 @@ dependencies = [
  "num-traits",
  "paste",
  "wide",
+]
+
+[[package]]
+name = "sussy_net"
+version = "0.1.0"
+dependencies = [
+ "nalgebra",
+ "rand",
 ]
 
 [[package]]

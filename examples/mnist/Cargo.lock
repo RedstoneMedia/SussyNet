@@ -102,7 +102,7 @@ dependencies = [
  "bytes",
  "flate2",
  "nalgebra",
- "neural_network_from_scratch",
+ "sussy_net",
 ]
 
 [[package]]
@@ -130,14 +130,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "neural_network_from_scratch"
-version = "0.1.0"
-dependencies = [
- "nalgebra",
- "rand",
 ]
 
 [[package]]
@@ -265,6 +257,14 @@ dependencies = [
  "num-traits",
  "paste",
  "wide",
+]
+
+[[package]]
+name = "sussy_net"
+version = "0.1.0"
+dependencies = [
+ "nalgebra",
+ "rand",
 ]
 
 [[package]]

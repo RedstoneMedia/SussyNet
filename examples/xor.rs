@@ -1,5 +1,5 @@
 use nalgebra::DVector;
-use neural_network_from_scratch::{ActivationFunction, NeuralNetwork};
+use sussy_net::{ActivationFunction, NeuralNetwork};
 
 
 fn main() {

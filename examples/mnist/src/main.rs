@@ -3,7 +3,7 @@ use std::io::Read;
 use bytes::{Buf, Bytes};
 use flate2::read::GzDecoder;
 use nalgebra::{DVector};
-use neural_network_from_scratch::{NeuralNetwork, ActivationFunction};
+use sussy_net::{NeuralNetwork, ActivationFunction};
 
 fn get_training_file_bytes(path : &str) -> (usize, Bytes) {
     let file = std::fs::File::open(path).expect("Could not open mnist file: Did you download the MNIST data set gzip files ?");
@@ -78,6 +78,6 @@ fn main() {
     let test_outputs : Vec<DVector<f64>> = outputs.drain(0..test_size).collect();
     // Train network for 10 epochs, but test accuracy before and after train
     test_accuarcy(&neural_network, &test_inputs, &test_outputs);
-    neural_network.fit(inputs.clone(), outputs.clone(), 15, 4, 1, |_, loss| loss * 0.0005);
+    neural_network.fit(inputs.clone(), outputs.clone(), 10, 2, 1, |_, loss| loss * 0.0005);
     test_accuarcy(&neural_network, &inputs, &outputs);
 }
