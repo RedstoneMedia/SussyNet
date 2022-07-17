@@ -1,9 +1,11 @@
+use std::io::{Read, Write};
 use std::iter;
 use nalgebra::{DMatrix, DVector};
 use std::ops::{AddAssign};
 use rand::Rng;
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "save", derive(serde::Serialize, serde::Deserialize))]
 pub enum ActivationFunction {
     Identity,
     Relu,
@@ -41,6 +43,7 @@ impl ActivationFunction {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "save", derive(serde::Serialize, serde::Deserialize))]
 pub struct Layer {
     pub weights_matrix : DMatrix<f64>,
     pub bias_vector : DVector<f64>,
@@ -74,6 +77,7 @@ impl Layer {
 }
 
 #[derive(Clone)]
+#[cfg_attr(feature = "save", derive(serde::Serialize, serde::Deserialize))]
 pub struct NeuralNetwork {
     input_size : u16,
     pub layers : Vec<Layer>
@@ -226,6 +230,21 @@ impl NeuralNetwork {
                 println!("[Fit] Epoch: {}/{} loss: {}", epoch+1, epochs, loss);
             }
         }
+    }
+
+    #[cfg(feature = "save")]
+    pub fn save(&self, path : &str) {
+        let data = bincode::serialize(self).expect("Could not serialize Neural network");
+        let mut save_file = std::fs::File::create(path).expect("Could not create save file");
+        save_file.write_all(&data).expect("Could not write save data to file");
+    }
+
+    #[cfg(feature = "save")]
+    pub fn load(path : &str) -> Self {
+        let mut save_file = std::fs::File::open(path).expect("Could not open save file");
+        let mut data = Vec::new();
+        save_file.read_to_end(&mut data).expect("Could not read from save file");
+        bincode::deserialize(&data).expect("Could not deserialize save file data")
     }
 
 }

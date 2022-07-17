@@ -78,6 +78,8 @@ fn main() {
     let test_outputs : Vec<DVector<f64>> = outputs.drain(0..test_size).collect();
     // Train network for 10 epochs, but test accuracy before and after train
     test_accuarcy(&neural_network, &test_inputs, &test_outputs);
-    neural_network.fit(inputs.clone(), outputs.clone(), 10, 2, 1, |_, loss| loss * 0.0005);
+    neural_network.fit(inputs.clone(), outputs.clone(), 10, 4, 1, |_, loss| loss * 0.0005);
     test_accuarcy(&neural_network, &inputs, &outputs);
+    // Save trained model
+    neural_network.save("mnist.nn");
 }
